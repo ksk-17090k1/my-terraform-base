@@ -8,6 +8,7 @@ data "aws_iam_policy" "lambda_basic_execution" {
   arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+# slack通知用SNSトピック
 data "aws_sns_topic" "topic" {
-  name = "gen-ai-${var.environment}-sns-topic-cloudwatch-itr-candidate-form"
+  name = "${local.project_prefix_kebab}-sns-topic-cloudwatch"
 }
