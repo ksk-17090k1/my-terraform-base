@@ -51,6 +51,7 @@ jobs:
           path: ${{ github.workspace }}/.github/modules
           token: ${{ steps.generate_token.outputs.token }}
 
+      # TODO: moduleからコード持ってくる
       - name: terraform ci
         uses: ./.github/modules/actions/terraform-ci
         with:
@@ -102,6 +103,7 @@ jobs:
           path: ${{ github.workspace }}/.github/modules
           token: ${{ steps.generate_token.outputs.token }}
 
+      # TODO: moduleからコード持ってくる
       - name: terraform ci
         uses: ./.github/modules/actions/terraform-ci
         with:
