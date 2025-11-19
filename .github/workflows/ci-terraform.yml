@@ -1,0 +1,117 @@
+name: itr-candidate-form-terraform-ci
+
+on:
+  pull_request:
+    branches:
+      - main
+      - staging
+    paths:
+      - "terraform/**"
+  workflow_dispatch:
+
+env:
+  TF_VERSION: 1.12.2
+  TFCMT_VERSION: v4.14.3
+
+jobs:
+  terraform_plan_prd:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: main checkout
+        uses: actions/checkout@v4
+
+      - name: merge into default branch
+        run: bash ${{ github.workspace }}/.github/bin/git-merge.sh ${{ github.head_ref }} ${{ github.base_ref }}
+
+      - name: authenticate to aws
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ap-northeast-1
+          # TODO: RoleのARNを、CAILと同じものを使っているので分離する
+          role-to-assume: ${{ vars.AWS_IAM_ROLE_TO_ASSUME_PRD }}
+
+      - name: generate github apps access token
+        id: generate_token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.TECHNOLOGY_STRATEGY_GITHUB_APP_ID }}
+          private-key: ${{ secrets.TECHNOLOGY_STRATEGY_GITHUB_APP_PRIVATE_KEY }}
+          owner: "lv-technology-strategy"
+
+      - name: github modules checkout
+        uses: actions/checkout@v4
+        with:
+          repository: "lv-technology-strategy/github-actions-modules"
+          ref: v1.0.1
+          path: ${{ github.workspace }}/.github/modules
+          token: ${{ steps.generate_token.outputs.token }}
+
+      - name: terraform ci
+        uses: ./.github/modules/actions/terraform-ci
+        with:
+          github-apps-access-token: ${{ steps.generate_token.outputs.token }}
+          comment-tfplan-results: enabled
+          terraform-version: ${{ env.TF_VERSION }}
+          terraform-dir-rel-path: terraform/environments/prd
+          tfcmt-version: ${{ env.TFCMT_VERSION }}
+          tfcmt-target-var: itr-candidate-form-prd
+          tfcmt-config-rel-path: .tfcmt/github.yml
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-pr-head-sha: ${{ github.event.pull_request.head.sha }}
+          github-pr-number: ${{ github.event.number }}
+
+  terraform_plan_stg:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: main checkout
+        uses: actions/checkout@v4
+
+      - name: merge into default branch
+        run: bash ${{ github.workspace }}/.github/bin/git-merge.sh ${{ github.head_ref }} ${{ github.base_ref }}
+
+      - name: authenticate to aws
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ap-northeast-1
+          # TODO: RoleのARNを、CAILと同じものを使っているので分離する
+          role-to-assume: ${{ vars.AWS_IAM_ROLE_TO_ASSUME_STG }}
+
+      - name: generate github apps access token
+        id: generate_token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.TECHNOLOGY_STRATEGY_GITHUB_APP_ID }}
+          private-key: ${{ secrets.TECHNOLOGY_STRATEGY_GITHUB_APP_PRIVATE_KEY }}
+          owner: "lv-technology-strategy"
+
+      - name: github modules checkout
+        uses: actions/checkout@v4
+        with:
+          repository: "lv-technology-strategy/github-actions-modules"
+          ref: v1.0.1
+          path: ${{ github.workspace }}/.github/modules
+          token: ${{ steps.generate_token.outputs.token }}
+
+      - name: terraform ci
+        uses: ./.github/modules/actions/terraform-ci
+        with:
+          github-apps-access-token: ${{ steps.generate_token.outputs.token }}
+          comment-tfplan-results: enabled
+          terraform-version: ${{ env.TF_VERSION }}
+          terraform-dir-rel-path: terraform/environments/stg
+          tfcmt-version: ${{ env.TFCMT_VERSION }}
+          tfcmt-target-var: itr-candidate-form-stg
+          tfcmt-config-rel-path: .tfcmt/github.yml
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-pr-head-sha: ${{ github.event.pull_request.head.sha }}
+          github-pr-number: ${{ github.event.number }}
